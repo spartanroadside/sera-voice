@@ -40,93 +40,45 @@ Patch Review → Apply → Snapshot → Audit Log
 
 ---
 
-SERA
-AI-Orchestrated IDE + Automation Platform
+# 2. CORE DESIGN PRINCIPLES
 
-SERA is an AI-native IDE and automation platform that combines:
+1. AI never writes directly to disk.
+2. All file edits go through Patch Review.
+3. All commands use an allowlist.
+4. All executions have traceId + executionId.
+5. High-risk actions require confirmation.
+6. Snapshots occur before every apply.
+7. Capabilities dynamically gate features.
+8. Automation can be globally disabled.
+9. Contracts are versioned.
+10. Execution is observable and debuggable.
 
-OpenAI (ChatGPT API)
+---
 
-SERA-Logic orchestration layer
+# 3. EXECUTION MODEL
 
-Integrated development environment (Workbench + Editor)
+## Universal Message Envelope
 
-Voice control ("Hey Sera")
-
-Home automation (Home Assistant integration)
-
-Structured Commands system
-
-Learning Layer (user-programmable skills)
-
-Plugin-ready automation architecture
-
-Full execution state machine
-
-Snapshot + rollback safety model
-
-SERA is not just an IDE.
-It is an AI execution and orchestration platform with a built-in development environment.
-
-1. SYSTEM OVERVIEW
-
-High-Level Architecture:
-
-VOICE / CHAT / PALETTE
-↓
-UI LAYER
-↓
-SERA-LOGIC (Router + Policy Engine + Execution Engine)
-↓
-Internal Executors (IDE/Home/System/etc) OR OpenAI (ChatGPT API Tool Loop)
-↓
-ProposedChangeSet / CommandResult / ChatMessage
-↓
-Patch Review → Apply → Snapshot → Audit Log
-
-2. CORE DESIGN PRINCIPLES
-
-AI never writes directly to disk.
-
-All file edits go through Patch Review.
-
-All commands use an allowlist.
-
-All executions have traceId + executionId.
-
-High-risk actions require confirmation.
-
-Snapshots occur before every apply.
-
-Capabilities dynamically gate features.
-
-Automation can be globally disabled.
-
-Contracts are versioned.
-
-Execution is observable and debuggable.
-
-3. EXECUTION MODEL
-
-Universal Message Envelope structure:
-
-contractVersion
-
-traceId
-
-executionId
-
-source (voice | chat | palette)
-
-projectId
-
-threadId
-
-payload (text or command)
-
-context (activeFile, selection, includeLogs, includeProjectSummary, etc.)
-
-Execution States:
+```json
+{
+  "contractVersion": 1,
+  "traceId": "trace_123",
+  "executionId": "exec_123",
+  "source": "voice|chat|palette",
+  "projectId": "proj_123",
+  "threadId": "thr_123",
+  "payload": {
+    "type": "text",
+    "content": "Fix the login bug"
+  },
+  "context": {
+    "activeFile": "src/login.js",
+    "selection": "",
+    "includeLogs": true,
+    "includeProjectSummary": false
+  }
+}
+Execution States
 
 idle
 
@@ -196,7 +148,7 @@ Plugin dispatching
 
 5. COMMAND SYSTEM
 
-Commands are categorized by domain:
+Commands are structured and categorized by domain:
 
 ide.*
 
@@ -208,21 +160,19 @@ system.*
 
 workflow.*
 
-Example command structure:
-
-id
-
-domain
-
-slots (parameters)
-
-executor
-
-risk level
-
-requiresConfirmation
-
-Routing order:
+Example Command
+{
+  "id": "home.light.set",
+  "domain": "home",
+  "slots": {
+    "area": "string",
+    "state": "on|off"
+  },
+  "executor": "homeAssistant",
+  "risk": "low",
+  "requiresConfirmation": false
+}
+Routing Order
 
 User Skills
 
@@ -230,39 +180,44 @@ User Aliases
 
 Built-in Commands
 
-AI classification
+AI Classification
 
 Follow-up clarification
 
 6. LEARNING LAYER
 
-Users can extend SERA safely.
+Users can safely extend SERA.
 
-User Skills (Workflows) contain:
+User Skills (Workflows)
+{
+  "id": "skill_001",
+  "name": "Build then deploy",
+  "steps": [
+    { "type": "command", "commandId": "ide.run_build" },
+    {
+      "type": "if",
+      "condition": { "ref": "$last.status", "eq": "success" },
+      "then": [
+        { "type": "command", "commandId": "system.deploy_latest" }
+      ]
+    }
+  ],
+  "policy": {
+    "requiresConfirmation": true,
+    "risk": "medium"
+  }
+}
+Aliases
 
-id
+"ship it" → skill_001
 
-name
+"kitchen light" → light.kitchen_ceiling
 
-steps (command / if / notify / confirm)
+"myapp" → proj_123
 
-policy (risk, confirmation)
+Memory
 
-enabled flag
-
-version
-
-Aliases map phrases to:
-
-entities
-
-projects
-
-paths
-
-skills
-
-Memory stores:
+Stores:
 
 default project
 
@@ -270,9 +225,9 @@ preferred model
 
 dock preferences
 
-voice routing defaults
+voice routing default
 
-Stored under:
+Stored in:
 
 .sera/learning/
 
@@ -280,32 +235,33 @@ Stored under:
 
 SERA sends structured request to OpenAI.
 
-Model may request tool execution.
+Model may call defined tools.
 
 SERA validates tool call.
 
-File edits become ProposedChangeSet.
+If file changes → create ProposedChangeSet.
 
-UI opens Patch Review.
+Return to UI for Patch Review.
 
 Apply only after approval.
 
 8. PROPOSED CHANGESET
-
-A ChangeSet includes:
-
-id
-
-projectId
-
-source (threadId, model)
-
-summary
-
-files[] (create / modify / delete / rename)
-
-optional diff
-
+{
+  "id": "chg_123",
+  "projectId": "proj_123",
+  "source": {
+    "type": "ai",
+    "threadId": "thr_123",
+    "model": "gpt-4o"
+  },
+  "files": [
+    {
+      "path": "src/login.js",
+      "type": "modify",
+      "content": "..."
+    }
+  ]
+}
 9. PATCH REVIEW RULE
 
 AI proposes.
@@ -315,8 +271,7 @@ System executes safely.
 No file writes bypass review.
 
 10. SECURITY & SAFETY
-
-Path Sandbox:
+Path Sandbox
 
 Reject absolute paths
 
@@ -324,33 +279,31 @@ Reject ".."
 
 Enforce project root
 
-Denylist protected folders
+Denylist: .git/, node_modules/, secrets/
 
-Atomic Writes:
+Atomic Writes
 
-Write temp
+write temp
 
 fsync
 
-Rename
+rename
 
 fsync directory
 
-Permission Scopes:
-
-allowDomains
-
-denyCommands
-
-requireConfirmationFor
-
-Risk Levels:
+Permission Scopes
+{
+  "allowDomains": ["ide", "research"],
+  "denyCommands": ["system.restart"],
+  "requireConfirmationFor": ["home.lock.*"]
+}
+Risk Levels
 
 Low: lights, media
 Medium: deploy, thermostat
 High: locks, restart service
 
-High-risk requires confirmation and optional PIN.
+High risk requires confirmation + optional PIN.
 
 11. SNAPSHOTS & RECOVERY
 
@@ -394,9 +347,12 @@ Stored in:
 
 Per project and per user:
 
-maxTokensPerHour
-
-maxExecutionsPerMinute
+{
+  "limits": {
+    "maxTokensPerHour": 100000,
+    "maxExecutionsPerMinute": 10
+  }
+}
 
 Prevents runaway automation.
 
@@ -428,23 +384,21 @@ endpoints
 
 15. CAPABILITIES GATING
 
-Server returns capability flags such as:
+Server returns:
 
-canOpenFileManager
-
-supportsTTS
-
-supportsWebsocketLogs
-
-canDeploy
+{
+  "canOpenFileManager": true,
+  "supportsTTS": true,
+  "supportsWebsocketLogs": true,
+  "canDeploy": true
+}
 
 UI hides unsupported features.
 
 16. AUTOMATION KILL SWITCH
-
-Global flag:
-
-automationEnabled = false
+{
+  "automationEnabled": false
+}
 
 Stops all command execution and tool calls.
 
@@ -486,34 +440,3 @@ Human approves.
 System executes safely.
 
 This enables powerful automation without chaos.
-
-FINAL STATE
-
-If you have:
-
-Versioned contracts
-
-Trace IDs
-
-Execution state machine
-
-Patch review enforcement
-
-Snapshots + undo
-
-Permission scopes
-
-Rate limiting
-
-Capability gating
-
-Kill switch
-
-Observability logs
-
-Learning layer
-
-Plugin architecture
-
-
-}
