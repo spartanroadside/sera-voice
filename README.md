@@ -78,6 +78,8 @@ Patch Review → Apply → Snapshot → Audit Log
     "includeProjectSummary": false
   }
 }
+```
+
 Execution States
 
 idle
@@ -161,6 +163,7 @@ system.*
 workflow.*
 
 Example Command
+```json
 {
   "id": "home.light.set",
   "domain": "home",
@@ -172,6 +175,7 @@ Example Command
   "risk": "low",
   "requiresConfirmation": false
 }
+```
 Routing Order
 
 User Skills
@@ -189,6 +193,7 @@ Follow-up clarification
 Users can safely extend SERA.
 
 User Skills (Workflows)
+```json
 {
   "id": "skill_001",
   "name": "Build then deploy",
@@ -207,6 +212,7 @@ User Skills (Workflows)
     "risk": "medium"
   }
 }
+```
 Aliases
 
 "ship it" → skill_001
@@ -246,6 +252,7 @@ Return to UI for Patch Review.
 Apply only after approval.
 
 8. PROPOSED CHANGESET
+```json
 {
   "id": "chg_123",
   "projectId": "proj_123",
@@ -262,7 +269,8 @@ Apply only after approval.
     }
   ]
 }
-9. PATCH REVIEW RULE
+```
+10. PATCH REVIEW RULE
 
 AI proposes.
 Human approves.
@@ -274,9 +282,9 @@ No file writes bypass review.
 Path Sandbox
 
 Reject absolute paths
-
+```json
 Reject ".."
-
+```
 Enforce project root
 
 Denylist: .git/, node_modules/, secrets/
@@ -292,11 +300,13 @@ rename
 fsync directory
 
 Permission Scopes
+```json
 {
   "allowDomains": ["ide", "research"],
   "denyCommands": ["system.restart"],
   "requireConfirmationFor": ["home.lock.*"]
 }
+```
 Risk Levels
 
 Low: lights, media
@@ -308,9 +318,9 @@ High risk requires confirmation + optional PIN.
 11. SNAPSHOTS & RECOVERY
 
 Before every apply:
-
+```json
 .sera/snapshots/<timestamp>_<changeSetId>/
-
+```
 Supports:
 
 Undo last apply
@@ -340,20 +350,20 @@ token usage
 failure reasons
 
 Stored in:
-
+```json
 .sera/audit.jsonl
-
+```
 13. RATE LIMITING & BUDGET
 
 Per project and per user:
-
+```json
 {
   "limits": {
     "maxTokensPerHour": 100000,
     "maxExecutionsPerMinute": 10
   }
 }
-
+```
 Prevents runaway automation.
 
 14. ENVIRONMENT PROFILES
@@ -385,21 +395,22 @@ endpoints
 15. CAPABILITIES GATING
 
 Server returns:
-
+```json
 {
   "canOpenFileManager": true,
   "supportsTTS": true,
   "supportsWebsocketLogs": true,
   "canDeploy": true
 }
-
+```
 UI hides unsupported features.
 
 16. AUTOMATION KILL SWITCH
+```json
 {
   "automationEnabled": false
 }
-
+```
 Stops all command execution and tool calls.
 
 17. PLUGIN SYSTEM
@@ -419,7 +430,7 @@ tools
 version
 
 18. DIRECTORY STRUCTURE
-
+```json
 sera/
 ui/
 sera-logic/
@@ -432,7 +443,7 @@ plugins/
 snapshots/
 audit.jsonl
 learning/
-
+```
 19. PHILOSOPHY
 
 AI proposes.
